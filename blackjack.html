@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack en JavaScript</title>
+    <style>
+        /* Style global de la page */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0b132b;
+            color: #e7e7e7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-top: 20px;
+            color: #f0a500;
+            text-transform: uppercase;
+            font-size: 2.5rem;
+        }
+
+        #game {
+            background-color: #1c2541;
+            padding: 20px;
+            width: 90%;
+            max-width: 800px;
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+
+        .cards-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .cards-section {
+            text-align: center;
+            flex: 1;
+        }
+
+        .cards {
+            margin-top: 10px;
+            background-color: #3a506b;
+            border-radius: 5px;
+            padding: 10px;
+            min-height: 50px;
+            color: #e7e7e7;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button#hitBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button#standBtn {
+            background-color: #f0a500;
+            color: white;
+        }
+
+        button#resetBtn {
+            background-color: #d00000;
+            color: white;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            opacity: 0.9;
+        }
+
+        #result {
+            font-size: 1.2rem;
+            margin-top: 20px;
+            background-color: #1c2541;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+<h1>Blackjack</h1>
+<div id="game">
+    <div class="cards-container">
+        <div class="cards-section">
+            <h3>Votre main</h3>
+            <div id="player-cards" class="cards"></div>
+        </div>
+        <div class="cards-section">
+            <h3>Main du croupier</h3>
+            <div id="dealer-cards" class="cards"></div>
+        </div>
+    </div>
+    <div id="result"></div>
+</div>
+<button id="hitBtn">Tirer</button>
+<button id="standBtn">Rester</button>
+<button id="resetBtn">Recommencer</button>
+
+<script>
+    let paquet, mainJoueur, mainCroupier;
+
+    function creerPaquet() {
+        const couleurs = ['Cœurs', 'Carreaux', 'Trèfles', 'Piques'];
+        const valeurs = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A'];
+        const paquet = [];
+        for (let couleur of couleurs) {
+            for (let valeur of valeurs) {
+                paquet.push({ valeur: valeur, couleur: couleur });
+            }
+        }
+        return paquet;
+    }
+
+    function melangerPaquet(paquet) {
+        for (let i = paquet.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [paquet[i], paquet[j]] = [paquet[j], paquet[i]];
+        }
+        return paquet;
+    }
+
+    function calculerValeurMain(main) {
+        let valeur = 0, nombreAs = 0;
+        for (let carte of main) {
+            if (carte.valeur === 'A') {
+                valeur += 11;
+                nombreAs++;
+            } else if (['R', 'D', 'V'].includes(carte.valeur)) {
+                valeur += 10;
+            } else {
+                valeur += parseInt(carte.valeur);
+            }
+        }
+        while (valeur > 21 && nombreAs > 0) {
+            valeur -= 10;
+            nombreAs--;
+        }
+        return valeur;
+    }
+
+    function afficherMains(devoilerCarteCroupier = false) {
+        document.getElementById('player-cards').innerText =
+            `${mainEnString(mainJoueur)} (Valeur: ${calculerValeurMain(mainJoueur)})`;
+
+        document.getElementById('dealer-cards').innerText = devoilerCarteCroupier
+            ? `${mainEnString(mainCroupier)} (Valeur: ${calculerValeurMain(mainCroupier)})`
+            : `[${mainCroupier[0].valeur} de ${mainCroupier[0].couleur}] et [Cachée]`;
+    }
+
+    function mainEnString(main) {
+        return main.map(carte => `${carte.valeur} de ${carte.couleur}`).join(', ');
+    }
+
+    function desactiverBoutons() {
+        document.getElementById('hitBtn').disabled = true;
+        document.getElementById('standBtn').disabled = true;
+    }
+
+    function afficherResultat(message, type) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerText = message;
+        resultDiv.classList.remove('victory', 'defeat');
+        if (type === 'victory') resultDiv.classList.add('victory');
+        if (type === 'defeat') resultDiv.classList.add('defeat');
+    }
+
+    function initJeu() {
+        paquet = melangerPaquet(creerPaquet());
+        mainJoueur = [paquet.pop(), paquet.pop()];
+        mainCroupier = [paquet.pop(), paquet.pop()];
+        afficherMains();
+        document.getElementById('hitBtn').disabled = false;
+        document.getElementById('standBtn').disabled = false;
+        afficherResultat('', ''); // Réinitialise le résultat
+    }
+
+    document.getElementById('hitBtn').addEventListener('click', () => {
+        if (calculerValeurMain(mainJoueur) < 21) {
+            mainJoueur.push(paquet.pop());
+            afficherMains();
+
+            if (calculerValeurMain(mainJoueur) > 21) {
+                afficherResultat("Vous avez dépassé 21 ! Vous perdez !", 'defeat');
+                desactiverBoutons();
+            }
+        }
+    });
+
+    document.getElementById('standBtn').addEventListener('click', () => {
+        desactiverBoutons();
+        while (calculerValeurMain(mainCroupier) < 17) {
+            mainCroupier.push(paquet.pop());
+        }
+        afficherMains(true);
+
+        const valeurJoueur = calculerValeurMain(mainJoueur);
+        const valeurCroupier = calculerValeurMain(mainCroupier);
+
+        if (valeurCroupier > 21 || valeurJoueur > valeurCroupier) {
+            afficherResultat("Vous gagnez !", 'victory');
+        } else if (valeurCroupier > valeurJoueur) {
+            afficherResultat("Le croupier gagne !", 'defeat');
+        } else {
+            afficherResultat("Égalité !", '');
+        }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', initJeu);
+
+    initJeu(); // Démarrer la partie au chargement
+</script>
+</body>
+</html>
